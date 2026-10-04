@@ -1,30 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-typedef struct {
-    char *args[64];
-    int count;
-} Command;
-
-void parse_command(char *line, Command *cmd) {
-    cmd->count = 0;
-
-    char *token = strtok(line, " \t");
-
-    while (token != NULL && cmd->count < 63) {
-        cmd->args[cmd->count] = token;
-        cmd->count++;
-        token = strtok(NULL, " \t");
-    }
-
-    cmd->args[cmd->count] = NULL;
-}
+#include <unistd.h>
+#include <sys/wait.h>
 
 int main(void) {
     char *line = NULL;
     size_t len = 0;
-    Command cmd;
+    char *args[64];
 
     while (1) {
         printf("shellforge$ ");
@@ -34,23 +17,41 @@ int main(void) {
             break;
         }
 
-        if (strlen(line) > 0 &&
-            line[strlen(line) - 1] == '\n') {
-            line[strlen(line) - 1] = '\0';
+        line[strcspn(line, "\n")] = '\0';
+
+        int i = 0;
+
+        char *token = strtok(line, " \t");
+
+        while (token != NULL && i < 63) {
+            args[i++] = token;
+            token = strtok(NULL, " \t");
         }
 
-        parse_command(line, &cmd);
+        args[i] = NULL;
 
-        if (cmd.count == 0) {
+        if (i == 0) {
             continue;
         }
 
-        if (strcmp(cmd.args[0], "exit") == 0) {
+        if (strcmp(args[0], "exit") == 0) {
             break;
         }
 
-        printf("Structure Log -> command: %s | Arguments found: %d\n",
-               cmd.args[0], cmd.count - 1);
+        pid_t pid = fork();
+
+        if (pid == 0) {
+            execvp(args[0], args);
+
+            perror("Command execution error");
+            exit(1);
+        }
+        else if (pid > 0) {
+            waitpid(pid, NULL, 0);
+        }
+        else {
+            perror("Fork creation error");
+        }
     }
 
     free(line);
