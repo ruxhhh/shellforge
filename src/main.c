@@ -6,6 +6,7 @@ int main(void) {
     char *line = NULL;
     size_t len = 0;
     ssize_t nread;
+    char *args[64];
 
     while (1) {
         printf("shellforge$ ");
@@ -22,12 +23,31 @@ int main(void) {
             line[nread - 1] = '\0';
         }
 
-        if (strcmp(line, "exit") == 0) {
+        int i = 0;
+
+        char *token = strtok(line, " \t");
+
+        while (token != NULL && i < 63) {
+            args[i] = token;
+            i++;
+            token = strtok(NULL, " \t");
+        }
+
+        args[i] = NULL;
+
+        if (i == 0) {
+            continue;
+        }
+
+        if (strcmp(args[0], "exit") == 0) {
             break;
         }
 
-        if (strlen(line) > 0) {
-            printf("You typed: %s\n", line);
+        printf("Command detected: %s (Total args: %d)\n",
+               args[0], i - 1);
+
+        for (int j = 0; j < i; j++) {
+            printf(" -> args[%d]: %s\n", j, args[j]);
         }
     }
 
